@@ -1,0 +1,25 @@
+# Gitee Go CI/CD - Android 构建
+version: '1'
+stages:
+  - build
+
+android_build:
+  stage: build
+  image: ubuntu:22.04
+  script:
+    - apt-get update -qq && apt-get install -y -qq openjdk-17-jdk wget unzip > /dev/null 2>&1
+    - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    - export ANDROID_HOME=/opt/android-sdk && mkdir -p $ANDROID_HOME
+    - cd /tmp && wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline.zip && unzip -q cmdline.zip
+    - mkdir -p $ANDROID_HOME/cmdline-tools/latest && mv cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/
+    - export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin && yes | sdkmanager --licenses > /dev/null 2>&1 || true
+    - sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null 2>&1
+    - export ANDROID_HOME=/opt/android-sdk
+    - chmod +x gradlew
+    - ./gradlew assembleDebug --no-daemon -q
+  artifacts:
+    paths:
+      - app/build/outputs/apk/debug/
+    expire_in: 30 days
+  only:
+    - master

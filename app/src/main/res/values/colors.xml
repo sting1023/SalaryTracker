@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="accent">#FF9800</color>
+    <color name="workday_color">#4CAF50</color>
+    <color name="weekend_color">#FF9800</color>
+    <color name="holiday_color">#F44336</color>
+    <color name="today_bg">#FFF9C4</color>
+</resources>

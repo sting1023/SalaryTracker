@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FAFAFA"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⚙️ 时薪预设"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="普通工作日时薪（元/小时）"
+        android:textSize="13sp"
+        android:textColor="#666"/>
+    <EditText
+        android:id="@+id/et_normal_rate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:hint="例: 20"
+        android:textSize="16sp"
+        android:layout_marginBottom="14dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="加班工作日时薪（元/小时）"
+        android:textSize="13sp"
+        android:textColor="#666"/>
+    <EditText
+        android:id="@+id/et_overtime_rate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:hint="例: 30"
+        android:textSize="16sp"
+        android:layout_marginBottom="14dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="节假日时薪（元/小时）"
+        android:textSize="13sp"
+        android:textColor="#666"/>
+    <EditText
+        android:id="@+id/et_holiday_rate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:hint="例: 50"
+        android:textSize="16sp"
+        android:layout_marginBottom="14dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="自定义节假日（一行一个，格式：2024-01-01）"
+        android:textSize="13sp"
+        android:textColor="#666"/>
+    <EditText
+        android:id="@+id/et_holidays"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:hint="2024-01-01&#10;2024-05-01"
+        android:minLines="3"
+        android:textSize="14sp"
+        android:layout_marginBottom="20dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_cancel_settings"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="取消"
+            android:textSize="15sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btn_save_settings"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:text="保存"
+            android:textSize="15sp"
+            android:backgroundTint="#2196F3"/>
+    </LinearLayout>
+</LinearLayout>

@@ -39,7 +39,7 @@ data class SalaryRecord(
 /** 应用设置 */
 data class SalarySettings(
     val normalHourlyRate: Double = 20.0,
-    val overtimeHourlyRate: Double = 30.0,
+    val overtimeDailyRate: Double = 0.0,    // 加班日薪（固定金额），>0则用日薪模式
     val holidayHourlyRate: Double = 50.0,
     val customHolidays: Set<String> = emptySet()  // "yyyy-MM-dd" 格式的自定义节假日
 )

@@ -29,7 +29,7 @@ class DataStore(private val ctx: Context) {
             val holidays = prefs.getStringSet(KEY_HOLIDAYS, emptySet()) ?: emptySet()
             SalarySettings(
                 normalHourlyRate = obj.optDouble("normalHourlyRate", 20.0),
-                overtimeHourlyRate = obj.optDouble("overtimeHourlyRate", 30.0),
+                overtimeDailyRate = obj.optDouble("overtimeDailyRate", 0.0),
                 holidayHourlyRate = obj.optDouble("holidayHourlyRate", 50.0),
                 customHolidays = holidays
             )
@@ -41,7 +41,7 @@ class DataStore(private val ctx: Context) {
     fun saveSettings(settings: SalarySettings) {
         val obj = JSONObject().apply {
             put("normalHourlyRate", settings.normalHourlyRate)
-            put("overtimeHourlyRate", settings.overtimeHourlyRate)
+            put("overtimeDailyRate", settings.overtimeDailyRate)
             put("holidayHourlyRate", settings.holidayHourlyRate)
         }
         prefs.edit()

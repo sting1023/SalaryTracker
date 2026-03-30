@@ -29,12 +29,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etHourlyRate: EditText
     private lateinit var etHours: EditText
     private lateinit var etDailyRate: EditText
+    private lateinit var llDailyRate: LinearLayout
+    private lateinit var llHourlyRate: LinearLayout
     private lateinit var cbHoliday: CheckBox
     private lateinit var etNote: EditText
     private lateinit var btnSave: Button
     private lateinit var btnDelete: Button
     private lateinit var btnPrevMonth: ImageButton
     private lateinit var btnNextMonth: ImageButton
+    private lateinit var btnModeHourly: Button
+    private lateinit var btnModeDaily: Button
     private lateinit var lvRecords: ListView
 
     // State
@@ -43,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private var selectedDate = ""
     private var isHoliday = false
     private var isWeekend = false
+    private var useDailyRateMode = false  // true=日薪模式, false=时薪模式
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA)
     private val monthFormat = SimpleDateFormat("yyyy年MM月", Locale.CHINA)
@@ -76,13 +81,26 @@ class MainActivity : AppCompatActivity() {
         etHourlyRate  = findViewById(R.id.et_hourly_rate)
         etHours       = findViewById(R.id.et_hours)
         etDailyRate   = findViewById(R.id.et_daily_rate)
+        llHourlyRate  = findViewById(R.id.ll_hourly_rate)
+        llDailyRate   = findViewById(R.id.ll_daily_rate)
         cbHoliday     = findViewById(R.id.cb_holiday)
         etNote        = findViewById(R.id.et_note)
         btnSave       = findViewById(R.id.btn_save)
         btnDelete     = findViewById(R.id.btn_delete)
         btnPrevMonth  = findViewById(R.id.btn_prev_month)
         btnNextMonth  = findViewById(R.id.btn_next_month)
+        btnModeHourly = findViewById(R.id.btn_mode_hourly)
+        btnModeDaily  = findViewById(R.id.btn_mode_daily)
         lvRecords     = findViewById(R.id.lv_records)
+
+        btnModeHourly.setOnClickListener {
+            useDailyRateMode = false
+            updateAll()
+        }
+        btnModeDaily.setOnClickListener {
+            useDailyRateMode = true
+            updateAll()
+        }
 
         btnPrevMonth.setOnClickListener {
             if (currentMonth == 1) { currentMonth = 12; currentYear-- }
@@ -145,6 +163,8 @@ class MainActivity : AppCompatActivity() {
                 else -> "工作日"
             }
             tvDayStatus.text = typeStr
+            // 优先使用已保存的模式
+            useDailyRateMode = record.dailyRate > 0
             etHourlyRate.setText(String.format("%.1f", record.hourlyRate))
             etHours.setText(String.format("%.1f", record.hours))
             etDailyRate.setText(String.format("%.1f", record.dailyRate))
@@ -167,12 +187,33 @@ class MainActivity : AppCompatActivity() {
             btnDelete.visibility = View.GONE
         }
 
+        // 模式切换UI
+        applyModeUI()
+
         // 渲染日历
         buildCalendarTable()
 
         // 月记录列表
         val monthRecords = ds.getRecordsForMonth(currentYear, currentMonth)
         lvRecords.adapter = RecordAdapter(monthRecords)
+    }
+
+    private fun applyModeUI() {
+        if (useDailyRateMode) {
+            llHourlyRate.visibility = View.GONE
+            llDailyRate.visibility = View.VISIBLE
+            btnModeHourly.setBackgroundColor(Color.parseColor("#E0E0E0"))
+            btnModeHourly.setTextColor(Color.parseColor("#888888"))
+            btnModeDaily.setBackgroundColor(Color.parseColor("#1565C0"))
+            btnModeDaily.setTextColor(Color.WHITE)
+        } else {
+            llHourlyRate.visibility = View.VISIBLE
+            llDailyRate.visibility = View.GONE
+            btnModeHourly.setBackgroundColor(Color.parseColor("#1565C0"))
+            btnModeHourly.setTextColor(Color.WHITE)
+            btnModeDaily.setBackgroundColor(Color.parseColor("#E0E0E0"))
+            btnModeDaily.setTextColor(Color.parseColor("#888888"))
+        }
     }
 
     private fun buildCalendarTable() {
@@ -270,30 +311,46 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveRecord() {
-        val hourlyRate = etHourlyRate.text.toString().toDoubleOrNull()
-        val hours = etHours.text.toString().toDoubleOrNull() ?: 0.0
-        val dailyRate = etDailyRate.text.toString().toDoubleOrNull() ?: 0.0
-
-        if (hourlyRate == null) {
-            Toast.makeText(this, "请填写时薪", Toast.LENGTH_SHORT).show()
-            return
+        if (!useDailyRateMode) {
+            // 时薪模式
+            val hourlyRate = etHourlyRate.text.toString().toDoubleOrNull()
+            val hours = etHours.text.toString().toDoubleOrNull() ?: 0.0
+            if (hourlyRate == null) {
+                Toast.makeText(this, "请填写时薪", Toast.LENGTH_SHORT).show()
+                return
+            }
+            if (hourlyRate < 0 || hours < 0) {
+                Toast.makeText(this, "数值不能为负", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val record = SalaryRecord.fromForm(
+                date = selectedDate,
+                hourlyRate = hourlyRate,
+                hours = hours,
+                dailyRate = 0.0,
+                isHoliday = cbHoliday.isChecked,
+                isWeekend = isWeekend,
+                note = etNote.text.toString()
+            )
+            ds.saveRecord(record)
+        } else {
+            // 日薪模式
+            val dailyRate = etDailyRate.text.toString().toDoubleOrNull() ?: 0.0
+            if (dailyRate <= 0) {
+                Toast.makeText(this, "请填写日薪", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val record = SalaryRecord.fromForm(
+                date = selectedDate,
+                hourlyRate = 0.0,
+                hours = 0.0,
+                dailyRate = dailyRate,
+                isHoliday = cbHoliday.isChecked,
+                isWeekend = isWeekend,
+                note = etNote.text.toString()
+            )
+            ds.saveRecord(record)
         }
-        if (hourlyRate < 0 || hours < 0) {
-            Toast.makeText(this, "数值不能为负", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val record = SalaryRecord.fromForm(
-            date = selectedDate,
-            hourlyRate = hourlyRate,
-            hours = hours,
-            dailyRate = dailyRate,
-            isHoliday = cbHoliday.isChecked,
-            isWeekend = isWeekend,
-            note = etNote.text.toString()
-        )
-
-        ds.saveRecord(record)
         Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
         updateAll()
     }
@@ -325,17 +382,17 @@ class MainActivity : AppCompatActivity() {
 
         val s = ds.loadSettings()
         etNormal.setText(String.format("%.1f", s.normalHourlyRate))
-        etOvertime.setText(String.format("%.1f", s.overtimeHourlyRate))
+        etOvertime.setText(String.format("%.1f", s.overtimeDailyRate))
         etHoliday.setText(String.format("%.1f", s.holidayHourlyRate))
         etHolidays.setText(s.customHolidays.joinToString("\n"))
 
         btnSave.setOnClickListener {
             val normalRate = etNormal.text.toString().toDoubleOrNull()
-            val overtimeRate = etOvertime.text.toString().toDoubleOrNull()
+            val overtimeDaily = etOvertime.text.toString().toDoubleOrNull() ?: 0.0
             val holidayRate = etHoliday.text.toString().toDoubleOrNull()
             val holidaysText = etHolidays.text.toString()
 
-            if (normalRate == null || overtimeRate == null || holidayRate == null) {
+            if (normalRate == null || holidayRate == null) {
                 Toast.makeText(this, "请填写有效的数值", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -345,7 +402,7 @@ class MainActivity : AppCompatActivity() {
                 .filter { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }
                 .toSet()
 
-            ds.saveSettings(SalarySettings(normalRate, overtimeRate, holidayRate, holidays))
+            ds.saveSettings(SalarySettings(normalRate, overtimeDaily, holidayRate, holidays))
             Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show()
             updateAll()
             dialog.dismiss()

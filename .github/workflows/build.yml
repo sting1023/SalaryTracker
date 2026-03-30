@@ -33,14 +33,14 @@ jobs:
             gradle-
 
       - name: Build APK
-        run: bash gradlew assembleRelease --no-daemon 2>&1 | tee build.log
+        run: bash gradlew assembleDebug --no-daemon 2>&1 | tee build.log
         continue-on-error: true
 
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-log
+          name: build-log-${{ github.run_id }}
           path: build.log
           retention-days: 1
 
@@ -48,6 +48,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: app/build/outputs/apk/release/app-release.apk
+          name: app-debug-${{ github.run_id }}
+          path: app/build/outputs/apk/debug/
           retention-days: 30

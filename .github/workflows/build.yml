@@ -33,7 +33,7 @@ jobs:
             gradle-
 
       - name: Build APK
-        run: bash gradlew assembleDebug --no-daemon 2>&1 | tee build.log
+        run: bash gradlew assembleRelease --no-daemon 2>&1 | tee build.log
         continue-on-error: true
 
       - name: Upload build log

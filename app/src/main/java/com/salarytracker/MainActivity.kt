@@ -10,7 +10,6 @@ import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.gridlayout.widget.GridLayout
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -23,8 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvYearMonth: TextView
     private lateinit var tvMonthTotal: TextView
     private lateinit var tvMonthHours: TextView
-    private lateinit var calendarGrid: GridLayout
-    private lateinit var dayEditPanel: androidx.cardview.widget.CardView
+    private lateinit var calendarTable: TableLayout
     private lateinit var tvSelectedDate: TextView
     private lateinit var tvDayTotal: TextView
     private lateinit var tvDayStatus: TextView
@@ -50,6 +48,9 @@ class MainActivity : AppCompatActivity() {
     private val monthFormat = SimpleDateFormat("yyyy年MM月", Locale.CHINA)
     private val dayDisplayFormat = SimpleDateFormat("M月d日 E", Locale.CHINA)
 
+    // 日历单元格高度（像素）
+    private val dayCellHeight = 48
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -68,8 +69,7 @@ class MainActivity : AppCompatActivity() {
         tvYearMonth    = findViewById(R.id.tv_year_month)
         tvMonthTotal   = findViewById(R.id.tv_month_total)
         tvMonthHours   = findViewById(R.id.tv_month_hours)
-        calendarGrid   = findViewById(R.id.calendar_grid)
-        dayEditPanel   = findViewById(R.id.day_edit_panel)
+        calendarTable  = findViewById(R.id.calendar_table)
         tvSelectedDate = findViewById(R.id.tv_selected_date)
         tvDayTotal     = findViewById(R.id.tv_day_total)
         tvDayStatus   = findViewById(R.id.tv_day_status)
@@ -168,20 +168,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 渲染日历
-        buildCalendarGrid()
+        buildCalendarTable()
 
         // 月记录列表
         val monthRecords = ds.getRecordsForMonth(currentYear, currentMonth)
         lvRecords.adapter = RecordAdapter(monthRecords)
     }
 
-    private fun buildCalendarGrid() {
-        calendarGrid.removeAllViews()
+    private fun buildCalendarTable() {
+        calendarTable.removeAllViews()
 
         val cal = Calendar.getInstance()
         cal.set(currentYear, currentMonth - 1, 1)
         val firstDow = cal.get(Calendar.DAY_OF_WEEK) // 1=周日
-        // 周一列开始
+        // 周一列开始：周一的下标是0
         val startOffset = if (firstDow == Calendar.SUNDAY) 6 else firstDow - 2
 
         val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
@@ -193,75 +193,79 @@ class MainActivity : AppCompatActivity() {
         val monthRecords = ds.getRecordsForMonth(currentYear, currentMonth)
         val recordMap = monthRecords.associateBy { it.date }
 
-        // 补充空白格子
-        for (i in 0 until startOffset) {
-            val spacer = Space(this)
-            val lp = GridLayout.LayoutParams()
-            lp.width = 0
-            lp.height = 0
-            lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-            lp.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-            spacer.layoutParams = lp
-            calendarGrid.addView(spacer)
-        }
+        // 6行×7列
+        for (row in 0 until 6) {
+            val tableRow = TableRow(this)
+            tableRow.layoutParams = TableLayout.LayoutParams(
+                TableLayout.LayoutParams.MATCH_PARENT,
+                dayCellHeight
+            )
 
-        // 日期格子
-        for (day in 1..daysInMonth) {
-            val dayStr = String.format("%04d-%02d-%02d", currentYear, currentMonth, day)
-            val isSelected = dayStr == selectedDate
-            val isToday = currentYear == todayYear && currentMonth == todayMonth &&
-                          day == todayCal.get(Calendar.DAY_OF_MONTH)
-            val hasRecord = recordMap.containsKey(dayStr)
+            for (col in 0 until 7) {
+                val cellIndex = row * 7 + col
+                val day = cellIndex - startOffset + 1
 
-            cal.set(currentYear, currentMonth - 1, day)
-            val dow = cal.get(Calendar.DAY_OF_WEEK)
-            val isSat = dow == Calendar.SATURDAY
-            val isSun = dow == Calendar.SUNDAY
-            val isHol = ds.isHoliday(dayStr)
+                if (day < 1 || day > daysInMonth) {
+                    // 空白格子
+                    val spacer = Space(this)
+                    val lp = TableRow.LayoutParams(0, dayCellHeight, 1f)
+                    spacer.layoutParams = lp
+                    tableRow.addView(spacer)
+                } else {
+                    val dayStr = String.format("%04d-%02d-%02d", currentYear, currentMonth, day)
+                    val isSelected = dayStr == selectedDate
+                    val isToday = currentYear == todayYear && currentMonth == todayMonth &&
+                                  day == todayCal.get(Calendar.DAY_OF_MONTH)
+                    val hasRecord = recordMap.containsKey(dayStr)
 
-            // 两行文字：日期 + 可选圆点
-            val label = if (hasRecord) "$day\n●" else day.toString()
+                    cal.set(currentYear, currentMonth - 1, day)
+                    val dow = cal.get(Calendar.DAY_OF_WEEK)
+                    val isSat = dow == Calendar.SATURDAY
+                    val isSun = dow == Calendar.SUNDAY
+                    val isHol = ds.isHoliday(dayStr)
 
-            val tv = TextView(this)
-            tv.text = label
-            tv.gravity = Gravity.CENTER
-            tv.textSize = 13f
-            tv.setLineSpacing(0f, 1.1f)
+                    // 文字：日期 + 可选圆点
+                    val label = if (hasRecord) "$day\n●" else day.toString()
 
-            val lp = GridLayout.LayoutParams()
-            lp.width = 0
-            lp.height = resources.getDimensionPixelSize(R.dimen.day_cell_height)
-            lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-            lp.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-            lp.setMargins(2)
-            tv.layoutParams = lp
+                    val tv = TextView(this)
+                    tv.text = label
+                    tv.gravity = Gravity.CENTER
+                    tv.textSize = 13f
+                    tv.setLineSpacing(0f, 1.1f)
 
-            // 背景和颜色
-            when {
-                isSelected -> {
-                    tv.setBackgroundResource(R.drawable.day_selected_bg)
-                    tv.setTextColor(Color.WHITE)
-                }
-                isToday -> {
-                    tv.setBackgroundResource(R.drawable.day_today_bg)
-                    tv.setTextColor(Color.parseColor("#1565C0"))
-                }
-                else -> {
-                    tv.setBackgroundResource(R.drawable.day_normal)
-                    tv.setTextColor(when {
-                        isHol -> Color.parseColor("#F44336")
-                        isSat || isSun -> Color.parseColor("#FF9800")
-                        else -> Color.parseColor("#333333")
-                    })
+                    val lp = TableRow.LayoutParams(0, dayCellHeight, 1f)
+                    tv.layoutParams = lp
+
+                    // 样式
+                    when {
+                        isSelected -> {
+                            tv.setBackgroundResource(R.drawable.day_selected_bg)
+                            tv.setTextColor(Color.WHITE)
+                        }
+                        isToday -> {
+                            tv.setBackgroundResource(R.drawable.day_today_bg)
+                            tv.setTextColor(Color.parseColor("#1565C0"))
+                        }
+                        else -> {
+                            tv.setBackgroundResource(R.drawable.day_normal)
+                            tv.setTextColor(when {
+                                isHol -> Color.parseColor("#F44336")
+                                isSat || isSun -> Color.parseColor("#FF9800")
+                                else -> Color.parseColor("#333333")
+                            })
+                        }
+                    }
+
+                    tv.setOnClickListener {
+                        selectedDate = dayStr
+                        updateAll()
+                    }
+
+                    tableRow.addView(tv)
                 }
             }
 
-            tv.setOnClickListener {
-                selectedDate = dayStr
-                updateAll()
-            }
-
-            calendarGrid.addView(tv)
+            calendarTable.addView(tableRow)
         }
     }
 

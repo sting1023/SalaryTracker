@@ -17,7 +17,7 @@ android {
 
     buildTypes {
         debug {
-            isSigningRequired = false
+            // debug builds are automatically unsigned (no signing)
         }
         release {
             isMinifyEnabled = false

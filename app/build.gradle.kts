@@ -16,12 +16,25 @@ android {
     }
 
     buildTypes {
+        debug {
+            isSigningRequired = false
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("salarytracker.keystore")
+            storePassword = "salary123"
+            keyAlias = "salarytracker"
+            keyPassword = "salary123"
         }
     }
 

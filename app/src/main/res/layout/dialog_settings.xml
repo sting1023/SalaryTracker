@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="⚙️ 时薪预设"
+        android:text="⚙️ 默认时薪设置"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="#333"
@@ -33,7 +33,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="加班工作日时薪（元/小时）"
+        android:text="加班日薪（设为 >0 则启用整日固定工资模式）"
         android:textSize="13sp"
         android:textColor="#666"/>
     <EditText
@@ -41,7 +41,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="numberDecimal"
-        android:hint="例: 30"
+        android:hint="例: 200（设为0则使用时薪模式）"
         android:textSize="16sp"
         android:layout_marginBottom="14dp"/>
 

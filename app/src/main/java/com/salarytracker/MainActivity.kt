@@ -1,37 +1,33 @@
 package com.salarytracker
 
-import android.app.DatePickerDialog
 import android.app.Dialog
+import android.graphics.Color
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.gridlayout.widget.GridLayout
 import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var ds: DataStore
-    private var settings = SalarySettings()
+    private lateinit var settings: SalarySettings
 
-    // 顶部月份选择器
+    // Views
     private lateinit var tvYearMonth: TextView
-    private lateinit var btnPrevMonth: ImageButton
-    private lateinit var btnNextMonth: ImageButton
     private lateinit var tvMonthTotal: TextView
-
-    // 日期选择
+    private lateinit var tvMonthHours: TextView
+    private lateinit var calendarGrid: GridLayout
+    private lateinit var dayEditPanel: androidx.cardview.widget.CardView
     private lateinit var tvSelectedDate: TextView
-    private lateinit var btnPickDate: Button
-
-    // 当天信息
     private lateinit var tvDayTotal: TextView
     private lateinit var tvDayStatus: TextView
-
-    // 输入表单
     private lateinit var etHourlyRate: EditText
     private lateinit var etHours: EditText
     private lateinit var etDailyRate: EditText
@@ -39,10 +35,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etNote: EditText
     private lateinit var btnSave: Button
     private lateinit var btnDelete: Button
-
-    // 月统计列表
+    private lateinit var btnPrevMonth: ImageButton
+    private lateinit var btnNextMonth: ImageButton
     private lateinit var lvRecords: ListView
 
+    // State
     private var currentYear = 0
     private var currentMonth = 0
     private var selectedDate = ""
@@ -50,8 +47,8 @@ class MainActivity : AppCompatActivity() {
     private var isWeekend = false
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA)
-    private val displayDateFormat = SimpleDateFormat("yyyy年MM月dd日 E", Locale.CHINA)
     private val monthFormat = SimpleDateFormat("yyyy年MM月", Locale.CHINA)
+    private val dayDisplayFormat = SimpleDateFormat("M月d日 E", Locale.CHINA)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,11 +65,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        // 顶部月份
-        tvYearMonth   = findViewById(R.id.tv_year_month)
+        tvYearMonth    = findViewById(R.id.tv_year_month)
+        tvMonthTotal   = findViewById(R.id.tv_month_total)
+        tvMonthHours   = findViewById(R.id.tv_month_hours)
+        calendarGrid   = findViewById(R.id.calendar_grid)
+        dayEditPanel   = findViewById(R.id.day_edit_panel)
+        tvSelectedDate = findViewById(R.id.tv_selected_date)
+        tvDayTotal     = findViewById(R.id.tv_day_total)
+        tvDayStatus   = findViewById(R.id.tv_day_status)
+        etHourlyRate  = findViewById(R.id.et_hourly_rate)
+        etHours       = findViewById(R.id.et_hours)
+        etDailyRate   = findViewById(R.id.et_daily_rate)
+        cbHoliday     = findViewById(R.id.cb_holiday)
+        etNote        = findViewById(R.id.et_note)
+        btnSave       = findViewById(R.id.btn_save)
+        btnDelete     = findViewById(R.id.btn_delete)
         btnPrevMonth  = findViewById(R.id.btn_prev_month)
         btnNextMonth  = findViewById(R.id.btn_next_month)
-        tvMonthTotal  = findViewById(R.id.tv_month_total)
+        lvRecords     = findViewById(R.id.lv_records)
 
         btnPrevMonth.setOnClickListener {
             if (currentMonth == 1) { currentMonth = 12; currentYear-- }
@@ -85,82 +95,56 @@ class MainActivity : AppCompatActivity() {
             updateAll()
         }
 
-        // 日期选择
-        tvSelectedDate = findViewById(R.id.tv_selected_date)
-        btnPickDate   = findViewById(R.id.btn_pick_date)
-        btnPickDate.setOnClickListener { showDatePicker() }
-
-        // 当天信息
-        tvDayTotal  = findViewById(R.id.tv_day_total)
-        tvDayStatus = findViewById(R.id.tv_day_status)
-
-        // 输入表单
-        etHourlyRate = findViewById(R.id.et_hourly_rate)
-        etHours      = findViewById(R.id.et_hours)
-        etDailyRate  = findViewById(R.id.et_daily_rate)
-        cbHoliday    = findViewById(R.id.cb_holiday)
-        etNote       = findViewById(R.id.et_note)
-        btnSave      = findViewById(R.id.btn_save)
-        btnDelete    = findViewById(R.id.btn_delete)
-
         btnSave.setOnClickListener   { saveRecord() }
         btnDelete.setOnClickListener { deleteRecord() }
 
-        // 月记录列表
-        lvRecords = findViewById(R.id.lv_records)
         lvRecords.setOnItemClickListener { _, _, pos, _ ->
             val records = ds.getRecordsForMonth(currentYear, currentMonth)
             if (pos < records.size) {
-                val r = records[pos]
-                selectedDate = r.date
+                selectedDate = records[pos].date
                 updateAll()
             }
         }
 
-        // 设置按钮
         findViewById<Button>(R.id.btn_settings).setOnClickListener {
             showSettingsDialog()
         }
-
-        // 日期点击也能选日期
-        tvSelectedDate.setOnClickListener { showDatePicker() }
     }
 
     private fun updateAll() {
         settings = ds.loadSettings()
 
-        // 月份显示
+        // 顶部月份
         val cal = Calendar.getInstance()
         cal.set(currentYear, currentMonth - 1, 1)
         tvYearMonth.text = monthFormat.format(cal.time)
 
-        // 月统计
+        // 月合计
         val monthStats = ds.getMonthStats(currentYear, currentMonth)
-        tvMonthTotal.text = "当月合计: ${String.format("%.2f", monthStats.totalSalary)}元  |  ${String.format("%.1f", monthStats.totalHours)}小时"
+        tvMonthTotal.text = "¥${String.format("%.2f", monthStats.totalSalary)}"
+        tvMonthHours.text = "${String.format("%.1f", monthStats.totalHours)} 小时"
 
-        // 选中日期显示
-        val parts = selectedDate.split("-")
+        // 选中日期信息
         val selCal = Calendar.getInstance()
+        val parts = selectedDate.split("-")
         selCal.set(parts[0].toInt(), parts[1].toInt() - 1, parts[2].toInt())
-        tvSelectedDate.text = displayDateFormat.format(selCal.time)
+        tvSelectedDate.text = dayDisplayFormat.format(selCal.time)
 
-        // 计算当天属性
+        // 当天属性
         isHoliday = ds.isHoliday(selectedDate)
-        val selParts = selectedDate.split("-")
-        selCal.set(selParts[0].toInt(), selParts[1].toInt() - 1, selParts[2].toInt())
         val dow = selCal.get(Calendar.DAY_OF_WEEK)
         isWeekend = dow == Calendar.SATURDAY || dow == Calendar.SUNDAY
 
-        // 当天记录
+        // 当天记录填充表单
         val record = ds.getRecord(selectedDate)
         if (record != null) {
-            tvDayTotal.text = "当天工资: ${String.format("%.2f", record.total)}元"
+            tvDayTotal.text = "¥${String.format("%.2f", record.total)}"
             val typeStr = when {
                 record.isHoliday -> "节假日"
                 record.isWeekend -> "周末"
                 else -> "工作日"
             }
-            tvDayStatus.text = "$typeStr | 时薪${record.hourlyRate}元/h × ${record.hours}h + 日薪${record.dailyRate}元"
+            tvDayStatus.text = typeStr
             etHourlyRate.setText(String.format("%.1f", record.hourlyRate))
             etHours.setText(String.format("%.1f", record.hours))
             etDailyRate.setText(String.format("%.1f", record.dailyRate))
@@ -168,13 +152,13 @@ class MainActivity : AppCompatActivity() {
             etNote.setText(record.note)
             btnDelete.visibility = View.VISIBLE
         } else {
-            tvDayTotal.text = "当天工资: 0.00元"
-            tvDayStatus.text = if (isHoliday) "节假日" else if (isWeekend) "周末" else "工作日"
-            // 自动填充时薪
-            val autoRate = when {
-                isHoliday -> settings.holidayHourlyRate
-                else -> settings.normalHourlyRate
+            tvDayTotal.text = "¥0.00"
+            tvDayStatus.text = when {
+                isHoliday -> "节假日"
+                isWeekend -> "周末"
+                else -> "工作日"
             }
+            val autoRate = if (isHoliday) settings.holidayHourlyRate else settings.normalHourlyRate
             etHourlyRate.setText(String.format("%.1f", autoRate))
             etHours.setText("")
             etDailyRate.setText("0")
@@ -183,52 +167,122 @@ class MainActivity : AppCompatActivity() {
             btnDelete.visibility = View.GONE
         }
 
+        // 渲染日历
+        buildCalendarGrid()
+
         // 月记录列表
         val monthRecords = ds.getRecordsForMonth(currentYear, currentMonth)
-        val adapter = RecordAdapter(monthRecords)
-        lvRecords.adapter = adapter
-
-        if (monthRecords.isEmpty()) {
-            tvMonthTotal.text = (tvMonthTotal.text.toString() + " (本月暂无记录)")
-        }
+        lvRecords.adapter = RecordAdapter(monthRecords)
     }
 
-    private fun showDatePicker() {
-        val parts = selectedDate.split("-")
-        val y = parts[0].toInt()
-        val m = parts[1].toInt() - 1
-        val d = parts[2].toInt()
+    private fun buildCalendarGrid() {
+        calendarGrid.removeAllViews()
 
-        DatePickerDialog(this, { _, year, month, day ->
-            val cal = Calendar.getInstance()
-            cal.set(year, month, day)
-            selectedDate = dateFormat.format(cal.time)
-            updateAll()
-        }, y, m, d).show()
+        val cal = Calendar.getInstance()
+        cal.set(currentYear, currentMonth - 1, 1)
+        val firstDow = cal.get(Calendar.DAY_OF_WEEK) // 1=周日
+        // 周一列开始
+        val startOffset = if (firstDow == Calendar.SUNDAY) 6 else firstDow - 2
+
+        val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val today = dateFormat.format(Date())
+        val todayCal = Calendar.getInstance()
+        val todayYear = todayCal.get(Calendar.YEAR)
+        val todayMonth = todayCal.get(Calendar.MONTH) + 1
+
+        val monthRecords = ds.getRecordsForMonth(currentYear, currentMonth)
+        val recordMap = monthRecords.associateBy { it.date }
+
+        // 补充空白格子
+        for (i in 0 until startOffset) {
+            val spacer = Space(this)
+            val lp = GridLayout.LayoutParams()
+            lp.width = 0
+            lp.height = 0
+            lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            lp.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            spacer.layoutParams = lp
+            calendarGrid.addView(spacer)
+        }
+
+        // 日期格子
+        for (day in 1..daysInMonth) {
+            val dayStr = String.format("%04d-%02d-%02d", currentYear, currentMonth, day)
+            val isSelected = dayStr == selectedDate
+            val isToday = currentYear == todayYear && currentMonth == todayMonth &&
+                          day == todayCal.get(Calendar.DAY_OF_MONTH)
+            val hasRecord = recordMap.containsKey(dayStr)
+
+            cal.set(currentYear, currentMonth - 1, day)
+            val dow = cal.get(Calendar.DAY_OF_WEEK)
+            val isSat = dow == Calendar.SATURDAY
+            val isSun = dow == Calendar.SUNDAY
+            val isHol = ds.isHoliday(dayStr)
+
+            // 两行文字：日期 + 可选圆点
+            val label = if (hasRecord) "$day\n●" else day.toString()
+
+            val tv = TextView(this)
+            tv.text = label
+            tv.gravity = Gravity.CENTER
+            tv.textSize = 13f
+            tv.setLineSpacing(0f, 1.1f)
+
+            val lp = GridLayout.LayoutParams()
+            lp.width = 0
+            lp.height = resources.getDimensionPixelSize(R.dimen.day_cell_height)
+            lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            lp.rowSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            lp.setMargins(2)
+            tv.layoutParams = lp
+
+            // 背景和颜色
+            when {
+                isSelected -> {
+                    tv.setBackgroundResource(R.drawable.day_selected_bg)
+                    tv.setTextColor(Color.WHITE)
+                }
+                isToday -> {
+                    tv.setBackgroundResource(R.drawable.day_today_bg)
+                    tv.setTextColor(Color.parseColor("#1565C0"))
+                }
+                else -> {
+                    tv.setBackgroundResource(R.drawable.day_normal)
+                    tv.setTextColor(when {
+                        isHol -> Color.parseColor("#F44336")
+                        isSat || isSun -> Color.parseColor("#FF9800")
+                        else -> Color.parseColor("#333333")
+                    })
+                }
+            }
+
+            tv.setOnClickListener {
+                selectedDate = dayStr
+                updateAll()
+            }
+
+            calendarGrid.addView(tv)
+        }
     }
 
     private fun saveRecord() {
         val hourlyRate = etHourlyRate.text.toString().toDoubleOrNull()
-        val hours = etHours.text.toString().toDoubleOrNull()
+        val hours = etHours.text.toString().toDoubleOrNull() ?: 0.0
         val dailyRate = etDailyRate.text.toString().toDoubleOrNull() ?: 0.0
 
-        if (hourlyRate == null || hours == null) {
-            Toast.makeText(this, "请填写时薪和小时数", Toast.LENGTH_SHORT).show()
+        if (hourlyRate == null) {
+            Toast.makeText(this, "请填写时薪", Toast.LENGTH_SHORT).show()
             return
         }
-
         if (hourlyRate < 0 || hours < 0) {
             Toast.makeText(this, "数值不能为负", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // 如果没填小时，当作0
-        val h = hours ?: 0.0
-
         val record = SalaryRecord.fromForm(
             date = selectedDate,
             hourlyRate = hourlyRate,
-            hours = h,
+            hours = hours,
             dailyRate = dailyRate,
             isHoliday = cbHoliday.isChecked,
             isWeekend = isWeekend,
@@ -236,14 +290,14 @@ class MainActivity : AppCompatActivity() {
         )
 
         ds.saveRecord(record)
-        Toast.makeText(this, "已保存: ${String.format("%.2f", record.total)}元", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
         updateAll()
     }
 
     private fun deleteRecord() {
         AlertDialog.Builder(this)
             .setTitle("删除记录")
-            .setMessage("确定删除 ${selectedDate} 的记录吗？")
+            .setMessage("确定删除 $selectedDate 的记录吗？")
             .setPositiveButton("删除") { _, _ ->
                 ds.deleteRecord(selectedDate)
                 updateAll()
@@ -258,11 +312,11 @@ class MainActivity : AppCompatActivity() {
         dialog.setContentView(R.layout.dialog_settings)
         dialog.show()
 
-        val etNormal = dialog.findViewById<EditText>(R.id.et_normal_rate)
-        val etOvertime = dialog.findViewById<EditText>(R.id.et_overtime_rate)
+        val etNormal  = dialog.findViewById<EditText>(R.id.et_normal_rate)
+        val etOvertime= dialog.findViewById<EditText>(R.id.et_overtime_rate)
         val etHoliday = dialog.findViewById<EditText>(R.id.et_holiday_rate)
-        val etHolidays = dialog.findViewById<EditText>(R.id.et_holidays)
-        val btnSave = dialog.findViewById<Button>(R.id.btn_save_settings)
+        val etHolidays= dialog.findViewById<EditText>(R.id.et_holidays)
+        val btnSave   = dialog.findViewById<Button>(R.id.btn_save_settings)
         val btnCancel = dialog.findViewById<Button>(R.id.btn_cancel_settings)
 
         val s = ds.loadSettings()
@@ -287,13 +341,7 @@ class MainActivity : AppCompatActivity() {
                 .filter { it.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) }
                 .toSet()
 
-            val newSettings = SalarySettings(
-                normalHourlyRate = normalRate,
-                overtimeHourlyRate = overtimeRate,
-                holidayHourlyRate = holidayRate,
-                customHolidays = holidays
-            )
-            ds.saveSettings(newSettings)
+            ds.saveSettings(SalarySettings(normalRate, overtimeRate, holidayRate, holidays))
             Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show()
             updateAll()
             dialog.dismiss()
@@ -312,25 +360,19 @@ class MainActivity : AppCompatActivity() {
         override fun getView(pos: Int, convertView: View?, parent: ViewGroup?): View {
             val view = convertView ?: layoutInflater.inflate(R.layout.item_record, parent, false)
             val r = records[pos]
-            val dayLabel = r.date.substring(8) + "日"
-
+            val dayNum = r.date.substring(8, 10).toInt().toString() + "日"
             val isToday = r.date == dateFormat.format(Date())
 
-            (view.findViewById<TextView>(R.id.tv_day)).text = dayLabel
+            (view.findViewById<TextView>(R.id.tv_day)).text = dayNum
             (view.findViewById<TextView>(R.id.tv_hours)).text = "${r.hours}h"
             (view.findViewById<TextView>(R.id.tv_rate)).text = "${r.hourlyRate}/h"
-            (view.findViewById<TextView>(R.id.tv_total)).text = "${String.format("%.2f", r.total)}元"
+            (view.findViewById<TextView>(R.id.tv_total)).text = "¥${String.format("%.2f", r.total)}"
 
             val typeFlag = view.findViewById<TextView>(R.id.tv_flag)
-            val flagText = when {
-                r.isHoliday -> "节假日"
-                r.isWeekend -> "周末"
-                else -> "工作"
-            }
-            val flagColor = when {
-                r.isHoliday -> ContextCompat.getColor(this@MainActivity, R.color.holiday_color)
-                r.isWeekend -> ContextCompat.getColor(this@MainActivity, R.color.weekend_color)
-                else -> ContextCompat.getColor(this@MainActivity, R.color.workday_color)
+            val (flagText, flagColor) = when {
+                r.isHoliday -> "节假日" to ContextCompat.getColor(this@MainActivity, R.color.holiday_color)
+                r.isWeekend -> "周末" to ContextCompat.getColor(this@MainActivity, R.color.weekend_color)
+                else -> "工作" to ContextCompat.getColor(this@MainActivity, R.color.workday_color)
             }
             typeFlag.text = flagText
             typeFlag.setBackgroundColor(flagColor)

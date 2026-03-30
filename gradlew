@@ -1,7 +1,14 @@
 #!/bin/sh
+
 APP_HOME=$(cd "$(dirname "$0")" && pwd)
-JAVA_HOME=/home/node/android-dev/jdk-17.0.2
-exec "$JAVA_HOME/bin/java" \
+
+if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+else
+    JAVA_CMD="java"
+fi
+
+exec "$JAVA_CMD" \
     -Dorg.gradle.appname=gradlew \
     -classpath "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
     org.gradle.wrapper.GradleWrapperMain \
